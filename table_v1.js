@@ -56,8 +56,9 @@ looker.plugins.visualizations.add({
     
     // (Skrócony przykład dla czytelności)
     queryResponse.fields.dimensions.forEach(field => {
-       html += `<th>${field.label_short}</th>`;
+       html += `<th>${field.label_short} [${field.view_label}]</th>`;
     });
+    console.log(queryResponse);
     html += '</tr></thead><tbody>';
     
     data.forEach(row => {
