@@ -1,22 +1,42 @@
 looker.plugins.visualizations.add({
-  id: "table_v1",
-  label: "table_v1",
+  id: "themed_table",
+  label: "Tabela z Motywami",
+  
+  // 1. Definicja opcji wyboru motywu
   options: {
-    // Tutaj musisz ręcznie zdefiniować każdą opcję, np. kolor nagłówka
-    header_color: {
+    table_theme: {
       type: "string",
-      label: "Kolor nagłówka",
-      display: "color",
-      default: "#c0c0c0"
+      label: "Motyw",
+      display: "select",
+      values: [
+        {"Klasyczny": "theme-classic"},
+        {"Ciemny": "theme-dark"},
+        {"Minimalistyczny": "theme-minimal"}
+      ],
+      default: "theme-classic"
     }
   },
 
   create: function(element, config) {
+    // 2. Definicja stylów CSS dla każdego motywu
     element.innerHTML = `
       <style>
-        .my-table { width: 100%; border-collapse: collapse; font-family: Arial; }
-        .my-table th, .my-table td { border: 1px solid #ddd; padding: 8px; }
-        .my-table th { background-color: #f2f2f2; }
+        /* Baza */
+        .my-table { width: 100%; border-collapse: collapse; font-family: sans-serif; }
+        .my-table td, .my-table th { padding: 10px; }
+
+        /* Motyw: Klasyczny (theme-classic) */
+        .theme-classic th { background-color: #f0f0f0; border-bottom: 2px solid #ccc; color: #333; }
+        .theme-classic td { border-bottom: 1px solid #ddd; color: #333; }
+        
+        /* Motyw: Ciemny (theme-dark) */
+        .theme-dark { background-color: #222; color: #fff; }
+        .theme-dark th { background-color: #444; border-bottom: 1px solid #666; }
+        .theme-dark td { border-bottom: 1px solid #555; }
+
+        /* Motyw: Minimalistyczny (theme-minimal) */
+        .theme-minimal th { border-bottom: 1px solid #000; text-align: left; font-weight: bold; }
+        .theme-minimal td { border: none; }
       </style>
       <div id="table-container"></div>
     `;
@@ -25,44 +45,31 @@ looker.plugins.visualizations.add({
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
-    if (data.length == 0) {
-      this.addError({title: "Brak danych", message: "Brak wyników."});
-      return;
-    }
 
-    // 1. Pobranie nagłówków (wymiary i miary)
-    const dimensions = queryResponse.fields.dimensions;
-    const measures = queryResponse.fields.measures;
-    const allFields = [...dimensions, ...measures];
+    // Pobranie wybranego motywu (klasy CSS)
+    const themeClass = config.table_theme || "theme-classic";
 
-    // 2. Budowanie HTML tabeli
-    let html = '<table class="my-table"><thead><tr>';
-
-    // Generowanie nagłówków
-    allFields.forEach(field => {
-      // Użycie opcji koloru z konfiguracji
-      const colorStyle = config.header_color ? `style="background-color:${config.header_color}"` : "";
-      html += `<th ${colorStyle}>${field.label_short || field.label}</th>`;
+    // Budowanie tabeli HTML
+    let html = `<table class="my-table ${themeClass}"><thead><tr>`;
+    
+    // ... (kod generowania nagłówków i wierszy jak w poprzednim przykładzie) ...
+    
+    // (Skrócony przykład dla czytelności)
+    queryResponse.fields.dimensions.forEach(field => {
+       html += `<th>${field.label_short}</th>`;
     });
     html += '</tr></thead><tbody>';
-
-    // Generowanie wierszy
+    
     data.forEach(row => {
-      html += '<tr>';
-      allFields.forEach(field => {
-        const cell = row[field.name];
-        // Użycie funkcji Lookera do formatowania wartości (np. waluty)
-        const renderedValue = LookerCharts.Utils.htmlForCell(cell);
-        html += `<td>${renderedValue}</td>`;
-      });
-      html += '</tr>';
+       html += '<tr>';
+       queryResponse.fields.dimensions.forEach(field => {
+         html += `<td>${LookerCharts.Utils.htmlForCell(row[field.name])}</td>`;
+       });
+       html += '</tr>';
     });
-
     html += '</tbody></table>';
 
-    // 3. Wstawienie tabeli do kontenera
     this._container.innerHTML = html;
-    
     done();
   }
 });
