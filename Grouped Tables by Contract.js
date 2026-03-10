@@ -84,7 +84,8 @@ looker.plugins.visualizations.add({
     // Zbieranie wszystkich kolumn z Lookera w odpowiedniej kolejności
     let fields = queryResponse.fields;
     let all_columns = (fields.dimension_like || []).concat(fields.measure_like || []);
-
+    let measure_names = (fields.measure_like || []).map(m => m.name);
+    
     if (all_columns.length < 2) {
       this.addError({ title: "Błąd", message: "Wymagane są minimum 2 kolumny (1 do grupowania, 1 do wyświetlenia)." });
       return;
@@ -118,7 +119,10 @@ looker.plugins.visualizations.add({
         let display_value = row[field_name].rendered || raw_value || (raw_value === 0 ? "0" : ""); 
         
         current_row_data[field_name] = display_value;
-
+        
+        // Sprawdzamy, czy aktualna kolumna znajduje się na liście miar
+        let is_measure = measure_names.includes(field_name);
+        
         // Analiza, czy kolumna ma wartości liczbowe do zsumowania
         if (raw_value !== null && raw_value !== undefined && raw_value !== "") {
           let num = parseFloat(raw_value);
