@@ -1,139 +1,131 @@
-/**
- * Rejestracja nowej wizualizacji w Lookerze.
- */
 looker.plugins.visualizations.add({
-  // Unikalny identyfikator Twojej wizualizacji
-  id: "super_custom_table",
-  // Nazwa, która wyświetli się użytkownikom w Lookerze
-  label: "Moja Konfigurowalna Tabela",
-
-  // -----------------------------------------------------------
-  // 1. OPCJE STYLOWANIA (widoczne w panelu ustawień Lookera)
-  // -----------------------------------------------------------
+  id: "custom_styled_table",
+  label: "Konfigurowalna Tabela",
+  
+  // Opcje globalne (statyczne)
   options: {
-    font_family: {
+    globalBorderColor: {
       type: "string",
-      label: "Czcionka",
-      display: "select",
-      values: [
-        {"Arial": "Arial, sans-serif"},
-        {"Times New Roman": "'Times New Roman', serif"},
-        {"Courier New": "'Courier New', monospace"}
-      ],
-      default: "Arial, sans-serif",
-      section: "Styl"
+      label: "Kolor obramowania tabeli",
+      display: "color",
+      default: "#e6e6e6"
     },
-    font_size: {
-      type: "number",
-      label: "Rozmiar czcionki (px)",
-      default: 14,
-      section: "Styl"
-    },
-    header_bg_color: {
-      type: "array",
-      label: "Kolor tła nagłówka",
-      display: "colors",
-      default: ["#4CAF50"], // Domyślnie zielony
-      section: "Kolory"
-    },
-    row_bg_color: {
-      type: "array",
-      label: "Kolor tła wierszy",
-      display: "colors",
-      default: ["#ffffff"], // Domyślnie biały
-      section: "Kolory"
-    },
-    cell_padding: {
-      type: "number",
-      label: "Odstęp wewnątrz komórki (Padding w px)",
-      default: 8,
-      section: "Rozmiary i Obramowanie"
-    },
-    border_style: {
+    globalFontFamily: {
       type: "string",
-      label: "Styl obramowania",
+      label: "Czcionka globalna",
       display: "select",
-      values: [
-        {"Brak": "none"},
-        {"Ciągła linia": "solid"},
-        {"Kropki": "dotted"}
-      ],
-      default: "solid",
-      section: "Rozmiary i Obramowanie"
-    },
-    border_color: {
-      type: "array",
-      label: "Kolor obramowania",
-      display: "colors",
-      default: ["#dddddd"], // Jasnoszary
-      section: "Rozmiary i Obramowanie"
+      values: [{"Arial": "Arial"}, {"Roboto": "Roboto"}, {"Times New Roman": "Times"}],
+      default: "Arial"
     }
   },
 
-  // -----------------------------------------------------------
-  // 2. TWORZENIE (inicjalizacja głównego elementu)
-  // -----------------------------------------------------------
-  create: function(element, config) {
-    // element - to pusty obszar (div) dostarczony przez Lookera, 
-    // w którym możemy rysować naszą wizualizację.
-
-    // Czyścimy zawartość, aby mieć pewność, że jest pusta
-    element.innerHTML = "";
-
-    // Tworzymy główny element tabeli w HTML
-    this.tableContainer = document.createElement("table");
-    
-    // Dodajemy go do ekranu
-    element.appendChild(this.tableContainer);
+ create: function(element, config) {
+    // Dodanie stylów CSS dla struktury tabeli (np. border-collapse)
+    element.innerHTML = `
+      <style>
+        .custom-looker-table { width: 100%; border-collapse: collapse; }
+        .custom-looker-table th, .custom-looker-table td { text-align: left; }
+      </style>
+      <div id="vis-container" style="height: 100%; overflow: auto;"></div>
+    `;
+    this._container = element.querySelector('#vis-container');
   },
 
-  // -----------------------------------------------------------
-  // 3. AKTUALIZACJA I RYSOWANIE
-  // -----------------------------------------------------------
   updateAsync: function(data, element, config, queryResponse, details, done) {
-    // data - to tablica z wynikami Twojego zapytania (wiersze danych)
-    // config - to obiekt zawierający aktualne ustawienia z panelu "options"
+    this.clearErrors();
 
-    // Krok 1: Wyczyść starą tabelę przed narysowaniem nowej
-    this.tableContainer.innerHTML = "";
+    // 1. DYNAMICZNE OPCJE DLA KOLUMN
+    // Pobieramy wszystkie wymiary (dimensions) i miary (measures) z zapytania
+    const fields = queryResponse.fields.dimension_like.concat(queryResponse.fields.measure_like);
+    let dynamicOptions = { ...this.options };
 
-    // Krok 2: Pobierz style z konfiguracji i przypisz je do naszej tabeli
-    // Używamy bezpiecznych wartości domyślnych na wypadek, gdyby ustawienia nie były załadowane
-    this.tableContainer.style.fontFamily = config.font_family || "Arial";
-    this.tableContainer.style.fontSize = (config.font_size || 14) + "px";
-    this.tableContainer.style.borderCollapse = "collapse"; // Ładne łączenie obramowań
-    this.tableContainer.style.width = "100%"; // Tabela zajmuje całą szerokość
+    fields.forEach(field => {
+      const fieldName = field.name;
+      const fieldLabel = field.label_short || field.label;
 
-    // Przygotowanie zmiennych do tworzenia HTML tabeli
-    // Uwaga: W docelowej implementacji tutaj będziesz musiał przeiterować 
-    // przez 'queryResponse.fields' dla nagłówków i przez 'data' dla wierszy.
-    let tableHTML = "<thead><tr>";
+      // Tworzymy zestaw opcji dla KAŻDEJ kolumny
+      dynamicOptions[`${fieldName}_color`] = {
+        section: `Kolumna: ${fieldLabel}`, // Grupuje opcje w sekcje w panelu Lookera
+        type: "string",
+        display: "color",
+        label: "Kolor tekstu",
+        default: "#333333"
+      };
+      
+      dynamicOptions[`${fieldName}_fontSize`] = {
+        section: `Kolumna: ${fieldLabel}`,
+        type: "string",
+        label: "Wielkość czcionki (np. 14px)",
+        default: "12px"
+      };
 
-    // Przykładowy nagłówek (docelowo generowany z danych)
-    let headerColor = config.header_bg_color ? config.header_bg_color[0] : "#4CAF50";
-    let padding = (config.cell_padding || 8) + "px";
-    let border = `1px ${config.border_style || 'solid'} ${config.border_color ? config.border_color[0] : '#ddd'}`;
+      dynamicOptions[`${fieldName}_padding`] = {
+        section: `Kolumna: ${fieldLabel}`,
+        type: "string",
+        label: "Padding (np. 10px 5px)",
+        default: "8px"
+      };
 
-    tableHTML += `<th style="background-color: ${headerColor}; padding: ${padding}; border: ${border};">Przykładowa Kolumna 1</th>`;
-    tableHTML += `<th style="background-color: ${headerColor}; padding: ${padding}; border: ${border};">Przykładowa Kolumna 2</th>`;
-    tableHTML += "</tr></thead><tbody>";
+      dynamicOptions[`${fieldName}_fontWeight`] = {
+        section: `Kolumna: ${fieldLabel}`,
+        type: "string",
+        display: "select",
+        label: "Grubość (Bold)",
+        values: [{"Normalny": "normal"}, {"Pogrubiony": "bold"}],
+        default: "normal"
+      };
+    });
 
-    // Przykładowe wiersze (docelowo generowane pętlą z obiektu 'data')
-    let rowColor = config.row_bg_color ? config.row_bg_color[0] : "#ffffff";
+    // Rejestrujemy nowe, dynamiczne opcje w Lookerze
+    this.trigger('registerOptions', dynamicOptions);
 
-    for (let i = 0; i < 3; i++) {
-      tableHTML += `<tr>`;
-      tableHTML += `<td style="background-color: ${rowColor}; padding: ${padding}; border: ${border};">Wartość A${i}</td>`;
-      tableHTML += `<td style="background-color: ${rowColor}; padding: ${padding}; border: ${border};">Wartość B${i}</td>`;
-      tableHTML += `</tr>`;
-    }
+    // 2. RYSOWANIE TABELI
+    // Rozpoczynamy budowę HTML w oparciu o wybrane opcje konfiguracyjne (config)
+    let html = `<table class="custom-looker-table" style="border: 1px solid ${config.globalBorderColor}; font-family: ${config.globalFontFamily}">`;
+    
+    // Nagłówki
+    html += "<thead><tr>";
+    fields.forEach(field => {
+      // Dla nagłówków można użyć globalnych stylów lub stworzyć osobną sekcję opcji
+      html += `<th style="border-bottom: 2px solid ${config.globalBorderColor}; padding: 10px;">${field.label_short}</th>`;
+    });
+    html += "</tr></thead><tbody>";
 
-    tableHTML += "</tbody>";
+    // Wiersze z danymi
+    data.forEach(row => {
+      html += "<tr>";
+      fields.forEach(field => {
+        const fieldName = field.name;
+        // Odczytanie wartości dla konkretnej komórki
+        const cellValue = LookerCharts.Utils.htmlForCell(row[fieldName]) || row[fieldName].value;
+        
+        // Zastosowanie dynamicznych stylów z obiektu 'config' dla tej konkretnej kolumny
+        const cellColor = config[`${fieldName}_color`] || "#333333";
+        const cellFontSize = config[`${fieldName}_fontSize`] || "12px";
+        const cellPadding = config[`${fieldName}_padding`] || "8px";
+        const cellFontWeight = config[`${fieldName}_fontWeight`] || "normal";
 
-    // Krok 3: Wstaw wygenerowany kod HTML do naszego elementu tabeli
-    this.tableContainer.innerHTML = tableHTML;
+        html += `
+          <td style="
+            color: ${cellColor}; 
+            font-size: ${cellFontSize}; 
+            padding: ${cellPadding}; 
+            font-weight: ${cellFontWeight};
+            border-bottom: 1px solid ${config.globalBorderColor};
+          ">
+            ${cellValue}
+          </td>
+        `;
+      });
+      html += "</tr>";
+    });
 
-    // Krok 4: Poinformuj Lookera, że skończyliśmy renderować wizualizację!
+    html += "</tbody></table>";
+
+    // Aktualizacja DOM
+    this._container.innerHTML = html;
+
+    // Zgłoszenie do Lookera, że renderowanie zakończone
     done();
   }
 });
