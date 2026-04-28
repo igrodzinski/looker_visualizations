@@ -207,6 +207,107 @@ looker.plugins.visualizations.add({
             };
         });
 
+        // Add Row Rule Options
+        dynamicOptions.row_rule_column = {
+            section: "Row",
+            type: "string",
+            label: "Kolumna warunku",
+            display: "select",
+            values: columnChoices,
+            default: "",
+            order: 100
+        };
+        dynamicOptions.row_rule_operator = {
+            section: "Row",
+            type: "string",
+            label: "Operator warunku",
+            display: "select",
+            values: [
+                {"Równe (=)": "=="},
+                {"Różne od (!=)": "!="},
+                {"Zawiera": "contains"}
+            ],
+            default: "==",
+            order: 101
+        };
+        dynamicOptions.row_rule_value = {
+            section: "Row",
+            type: "string",
+            label: "Wartość warunku",
+            display: "text",
+            default: "",
+            order: 102
+        };
+        dynamicOptions.row_rule_color = {
+            section: "Row",
+            type: "string",
+            label: "Kolor Tekstu",
+            display: "color",
+            default: "",
+            order: 103
+        };
+        dynamicOptions.row_rule_bg_color = {
+            section: "Row",
+            type: "string",
+            label: "Kolor Tła",
+            display: "color",
+            default: "",
+            order: 104
+        };
+        dynamicOptions.row_rule_text_align = {
+            section: "Row",
+            type: "string",
+            label: "Wyrównanie Tekstu",
+            display: "select",
+            values: [
+                {"Domyślne": ""},
+                {"Do lewej": "left"},
+                {"Środek": "center"},
+                {"Do prawej": "right"}
+            ],
+            default: "",
+            order: 105
+        };
+        dynamicOptions.row_rule_is_bold = {
+            section: "Row",
+            type: "boolean",
+            label: "Pogrubienie",
+            default: false,
+            order: 106
+        };
+        dynamicOptions.row_rule_padding_top = {
+            section: "Row",
+            type: "string",
+            label: "Padding Górny",
+            display: "text",
+            default: "",
+            order: 107
+        };
+        dynamicOptions.row_rule_padding_right = {
+            section: "Row",
+            type: "string",
+            label: "Padding Prawy",
+            display: "text",
+            default: "",
+            order: 108
+        };
+        dynamicOptions.row_rule_padding_bottom = {
+            section: "Row",
+            type: "string",
+            label: "Padding Dolny",
+            display: "text",
+            default: "",
+            order: 109
+        };
+        dynamicOptions.row_rule_padding_left = {
+            section: "Row",
+            type: "string",
+            label: "Padding Lewy",
+            display: "text",
+            default: "",
+            order: 110
+        };
+
         // Register the dynamic options
         this.trigger('registerOptions', dynamicOptions);
 
@@ -240,6 +341,24 @@ looker.plugins.visualizations.add({
         data.forEach((row, i) => {
             html += '<tr>';
 
+            // Evaluate Row Conditional Rule
+            let isRowMatch = false;
+            const ruleCol = config.row_rule_column;
+            const ruleOp = config.row_rule_operator || "==";
+            const ruleVal = config.row_rule_value;
+
+            if (ruleCol && ruleVal !== undefined && ruleVal !== "") {
+                const cellData = row[ruleCol];
+                if (cellData) {
+                    const cellValueStr = String(cellData.value || "").toLowerCase();
+                    const targetValStr = String(ruleVal).toLowerCase();
+
+                    if (ruleOp === "==" && cellValueStr === targetValStr) isRowMatch = true;
+                    else if (ruleOp === "!=" && cellValueStr !== targetValStr) isRowMatch = true;
+                    else if (ruleOp === "contains" && cellValueStr.includes(targetValStr)) isRowMatch = true;
+                }
+            }
+
             // Add Row Number Cell
             if (config.show_row_numbers) {
                 html += `<td class="row-number-cell">${i + 1}</td>`;
@@ -250,14 +369,24 @@ looker.plugins.visualizations.add({
                 const displayValue = (cell.html) ? cell.html : (cell.value_formatted || cell.value);
                 
                 const customWidth = config[`${field.name}_width`] || "auto";
-                const customColor = config[`${field.name}_color`] || "#000000";
-                const bgColor = config[`${field.name}_bg_color`] || "#ffffff";
-                const isBold = config[`${field.name}_is_bold`] ? "bold" : "normal";
-                const align = config[`${field.name}_text_align`] || "left";
-                const pt = config[`${field.name}_padding_top`] || "8px";
-                const pr = config[`${field.name}_padding_right`] || "8px";
-                const pb = config[`${field.name}_padding_bottom`] || "8px";
-                const pl = config[`${field.name}_padding_left`] || "8px";
+                
+                // Merge Column styles with Row Conditional Styles
+                const customColor = (isRowMatch && config.row_rule_color) ? config.row_rule_color : (config[`${field.name}_color`] || "#000000");
+                const bgColor = (isRowMatch && config.row_rule_bg_color) ? config.row_rule_bg_color : (config[`${field.name}_bg_color`] || "#ffffff");
+                
+                // For booleans and selects, check if row rule has a value
+                const colBold = config[`${field.name}_is_bold`] ? "bold" : "normal";
+                const rowBold = config.row_rule_is_bold ? "bold" : colBold;
+                const isBold = isRowMatch ? rowBold : colBold;
+                
+                const colAlign = config[`${field.name}_text_align`] || "left";
+                const isRowAlignSet = isRowMatch && config.row_rule_text_align && config.row_rule_text_align !== "";
+                const align = isRowAlignSet ? config.row_rule_text_align : colAlign;
+                
+                const pt = (isRowMatch && config.row_rule_padding_top) ? config.row_rule_padding_top : (config[`${field.name}_padding_top`] || "8px");
+                const pr = (isRowMatch && config.row_rule_padding_right) ? config.row_rule_padding_right : (config[`${field.name}_padding_right`] || "8px");
+                const pb = (isRowMatch && config.row_rule_padding_bottom) ? config.row_rule_padding_bottom : (config[`${field.name}_padding_bottom`] || "8px");
+                const pl = (isRowMatch && config.row_rule_padding_left) ? config.row_rule_padding_left : (config[`${field.name}_padding_left`] || "8px");
 
                 const cellStyle = `width: ${customWidth}; color: ${customColor}; background-color: ${bgColor}; font-weight: ${isBold}; text-align: ${align}; padding: ${pt} ${pr} ${pb} ${pl};`;
 
