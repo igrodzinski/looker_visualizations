@@ -74,70 +74,103 @@ looker.plugins.visualizations.add({
             }
         };
 
+        // Build column choices for the dropdown
+        const columnChoices = [];
         allFields.forEach(field => {
-            const fieldName = field.name;
-            const fieldLabel = field.label_short || field.label;
-
-            dynamicOptions[`${fieldName}_label`] = {
-                section: "Seria",
-                type: "string",
-                label: `[${fieldLabel}] Etykieta`,
-                display: "text",
-                default: fieldLabel,
-            };
-
-            dynamicOptions[`${fieldName}_width`] = {
-                section: "Seria",
-                type: "string",
-                label: `[${fieldLabel}] Szerokość`,
-                display: "text",
-                default: "auto",
-            };
-
-            dynamicOptions[`${fieldName}_color`] = {
-                section: "Seria",
-                type: "string",
-                label: `[${fieldLabel}] Kolor Tekstu`,
-                display: "color",
-                default: "#000000",
-            };
-
-            dynamicOptions[`${fieldName}_bg_color`] = {
-                section: "Seria",
-                type: "string",
-                label: `[${fieldLabel}] Kolor Tła`,
-                display: "color",
-                default: "#ffffff",
-            };
-
-            dynamicOptions[`${fieldName}_text_align`] = {
-                section: "Seria",
-                type: "string",
-                label: `[${fieldLabel}] Wyrównanie Tekstu`,
-                display: "select",
-                values: [
-                    {"Do lewej": "left"},
-                    {"Środek": "center"},
-                    {"Do prawej": "right"}
-                ],
-                default: "left",
-            };
-
-            dynamicOptions[`${fieldName}_is_bold`] = {
-                section: "Seria",
-                type: "boolean",
-                label: `[${fieldLabel}] Pogrubienie`,
-                default: false,
-            };
-
-            dynamicOptions[`${fieldName}_padding`] = {
-                section: "Seria",
-                type: "string",
-                label: `[${fieldLabel}] Padding`,
-                display: "text",
-                default: "8px",
-            };
+            let choice = {};
+            choice[field.label_short || field.label] = field.name;
+            columnChoices.push(choice);
         });
+
+        // Add the main selector option
+        dynamicOptions.selected_column_to_edit = {
+            section: "Seria",
+            type: "string",
+            label: "Wybierz kolumnę do edycji",
+            display: "select",
+            values: columnChoices,
+            default: allFields[0] ? allFields[0].name : "",
+            order: 1
+        };
+
+        // Determine the currently selected column
+        const selectedColumnName = config.selected_column_to_edit || (allFields[0] ? allFields[0].name : null);
+
+        // Generate options ONLY for the selected column
+        if (selectedColumnName) {
+            const fieldObj = allFields.find(f => f.name === selectedColumnName);
+            if (fieldObj) {
+                const fieldName = fieldObj.name;
+                const fieldLabel = fieldObj.label_short || fieldObj.label;
+
+                dynamicOptions[`${fieldName}_label`] = {
+                    section: "Seria",
+                    type: "string",
+                    label: `Etykieta (${fieldLabel})`,
+                    display: "text",
+                    default: fieldLabel,
+                    order: 2
+                };
+
+                dynamicOptions[`${fieldName}_width`] = {
+                    section: "Seria",
+                    type: "string",
+                    label: `Szerokość`,
+                    display: "text",
+                    default: "auto",
+                    order: 3
+                };
+
+                dynamicOptions[`${fieldName}_color`] = {
+                    section: "Seria",
+                    type: "string",
+                    label: `Kolor Tekstu`,
+                    display: "color",
+                    default: "#000000",
+                    order: 4
+                };
+
+                dynamicOptions[`${fieldName}_bg_color`] = {
+                    section: "Seria",
+                    type: "string",
+                    label: `Kolor Tła`,
+                    display: "color",
+                    default: "#ffffff",
+                    order: 5
+                };
+
+                dynamicOptions[`${fieldName}_text_align`] = {
+                    section: "Seria",
+                    type: "string",
+                    label: `Wyrównanie Tekstu`,
+                    display: "select",
+                    values: [
+                        {"Do lewej": "left"},
+                        {"Środek": "center"},
+                        {"Do prawej": "right"}
+                    ],
+                    default: "left",
+                    order: 6
+                };
+
+                dynamicOptions[`${fieldName}_is_bold`] = {
+                    section: "Seria",
+                    type: "boolean",
+                    label: `Pogrubienie`,
+                    default: false,
+                    order: 7
+                };
+
+                dynamicOptions[`${fieldName}_padding`] = {
+                    section: "Seria",
+                    type: "string",
+                    label: `Padding`,
+                    display: "text",
+                    default: "8px",
+                    order: 8
+                };
+            }
+        }
 
         // Register the dynamic options
         this.trigger('registerOptions', dynamicOptions);
