@@ -96,81 +96,116 @@ looker.plugins.visualizations.add({
         // Determine the currently selected column
         const selectedColumnName = config.selected_column_to_edit || (allFields[0] ? allFields[0].name : null);
 
-        // Generate options ONLY for the selected column
-        if (selectedColumnName) {
-            const fieldObj = allFields.find(f => f.name === selectedColumnName);
-            if (fieldObj) {
-                const fieldName = fieldObj.name;
-                const fieldLabel = fieldObj.label_short || fieldObj.label;
+        // Generate options for ALL columns, but hide the ones not selected
+        allFields.forEach(fieldObj => {
+            const fieldName = fieldObj.name;
+            const fieldLabel = fieldObj.label_short || fieldObj.label;
+            const isHidden = fieldName !== selectedColumnName;
 
-                dynamicOptions[`${fieldName}_label`] = {
-                    section: "Seria",
-                    type: "string",
-                    label: `Etykieta (${fieldLabel})`,
-                    display: "text",
-                    default: fieldLabel,
-                    order: 2
-                };
+            dynamicOptions[`${fieldName}_label`] = {
+                section: "Seria",
+                type: "string",
+                label: `Etykieta (${fieldLabel})`,
+                display: "text",
+                default: fieldLabel,
+                hidden: isHidden,
+                order: 2
+            };
 
-                dynamicOptions[`${fieldName}_width`] = {
-                    section: "Seria",
-                    type: "string",
-                    label: `Szerokość`,
-                    display: "text",
-                    default: "auto",
-                    order: 3
-                };
+            dynamicOptions[`${fieldName}_width`] = {
+                section: "Seria",
+                type: "string",
+                label: `Szerokość`,
+                display: "text",
+                default: "auto",
+                hidden: isHidden,
+                order: 3
+            };
 
-                dynamicOptions[`${fieldName}_color`] = {
-                    section: "Seria",
-                    type: "string",
-                    label: `Kolor Tekstu`,
-                    display: "color",
-                    default: "#000000",
-                    order: 4
-                };
+            dynamicOptions[`${fieldName}_color`] = {
+                section: "Seria",
+                type: "string",
+                label: `Kolor Tekstu`,
+                display: "color",
+                default: "#000000",
+                hidden: isHidden,
+                order: 4
+            };
 
-                dynamicOptions[`${fieldName}_bg_color`] = {
-                    section: "Seria",
-                    type: "string",
-                    label: `Kolor Tła`,
-                    display: "color",
-                    default: "#ffffff",
-                    order: 5
-                };
+            dynamicOptions[`${fieldName}_bg_color`] = {
+                section: "Seria",
+                type: "string",
+                label: `Kolor Tła`,
+                display: "color",
+                default: "#ffffff",
+                hidden: isHidden,
+                order: 5
+            };
 
-                dynamicOptions[`${fieldName}_text_align`] = {
-                    section: "Seria",
-                    type: "string",
-                    label: `Wyrównanie Tekstu`,
-                    display: "select",
-                    values: [
-                        {"Do lewej": "left"},
-                        {"Środek": "center"},
-                        {"Do prawej": "right"}
-                    ],
-                    default: "left",
-                    order: 6
-                };
+            dynamicOptions[`${fieldName}_text_align`] = {
+                section: "Seria",
+                type: "string",
+                label: `Wyrównanie Tekstu`,
+                display: "select",
+                values: [
+                    {"Do lewej": "left"},
+                    {"Środek": "center"},
+                    {"Do prawej": "right"}
+                ],
+                default: "left",
+                hidden: isHidden,
+                order: 6
+            };
 
-                dynamicOptions[`${fieldName}_is_bold`] = {
-                    section: "Seria",
-                    type: "boolean",
-                    label: `Pogrubienie`,
-                    default: false,
-                    order: 7
-                };
+            dynamicOptions[`${fieldName}_is_bold`] = {
+                section: "Seria",
+                type: "boolean",
+                label: `Pogrubienie`,
+                default: false,
+                hidden: isHidden,
+                order: 7
+            };
 
-                dynamicOptions[`${fieldName}_padding`] = {
-                    section: "Seria",
-                    type: "string",
-                    label: `Padding`,
-                    display: "text",
-                    default: "8px",
-                    order: 8
-                };
-            }
-        }
+            dynamicOptions[`${fieldName}_padding_top`] = {
+                section: "Seria",
+                type: "string",
+                label: `Padding Górny`,
+                display: "text",
+                default: "8px",
+                hidden: isHidden,
+                order: 8
+            };
+
+            dynamicOptions[`${fieldName}_padding_right`] = {
+                section: "Seria",
+                type: "string",
+                label: `Padding Prawy`,
+                display: "text",
+                default: "8px",
+                hidden: isHidden,
+                order: 9
+            };
+
+            dynamicOptions[`${fieldName}_padding_bottom`] = {
+                section: "Seria",
+                type: "string",
+                label: `Padding Dolny`,
+                display: "text",
+                default: "8px",
+                hidden: isHidden,
+                order: 10
+            };
+
+            dynamicOptions[`${fieldName}_padding_left`] = {
+                section: "Seria",
+                type: "string",
+                label: `Padding Lewy`,
+                display: "text",
+                default: "8px",
+                hidden: isHidden,
+                order: 11
+            };
+        });
 
         // Register the dynamic options
         this.trigger('registerOptions', dynamicOptions);
@@ -190,9 +225,12 @@ looker.plugins.visualizations.add({
             const bgColor = config[`${field.name}_bg_color`] || "#ffffff";
             const isBold = config[`${field.name}_is_bold`] ? "bold" : "normal";
             const align = config[`${field.name}_text_align`] || "left";
-            const padding = config[`${field.name}_padding`] || "8px";
+            const pt = config[`${field.name}_padding_top`] || "8px";
+            const pr = config[`${field.name}_padding_right`] || "8px";
+            const pb = config[`${field.name}_padding_bottom`] || "8px";
+            const pl = config[`${field.name}_padding_left`] || "8px";
 
-            const cellStyle = `width: ${customWidth}; color: ${customColor}; background-color: ${bgColor}; font-weight: ${isBold}; text-align: ${align}; padding: ${padding};`;
+            const cellStyle = `width: ${customWidth}; color: ${customColor}; background-color: ${bgColor}; font-weight: ${isBold}; text-align: ${align}; padding: ${pt} ${pr} ${pb} ${pl};`;
 
             html += `<th class="${field.name}" style="${cellStyle}">${label}</th>`;
         });
@@ -216,9 +254,12 @@ looker.plugins.visualizations.add({
                 const bgColor = config[`${field.name}_bg_color`] || "#ffffff";
                 const isBold = config[`${field.name}_is_bold`] ? "bold" : "normal";
                 const align = config[`${field.name}_text_align`] || "left";
-                const padding = config[`${field.name}_padding`] || "8px";
+                const pt = config[`${field.name}_padding_top`] || "8px";
+                const pr = config[`${field.name}_padding_right`] || "8px";
+                const pb = config[`${field.name}_padding_bottom`] || "8px";
+                const pl = config[`${field.name}_padding_left`] || "8px";
 
-                const cellStyle = `width: ${customWidth}; color: ${customColor}; background-color: ${bgColor}; font-weight: ${isBold}; text-align: ${align}; padding: ${padding};`;
+                const cellStyle = `width: ${customWidth}; color: ${customColor}; background-color: ${bgColor}; font-weight: ${isBold}; text-align: ${align}; padding: ${pt} ${pr} ${pb} ${pl};`;
 
                 html += `<td class="${field.name}" style="${cellStyle}">${displayValue}</td>`;
             });
