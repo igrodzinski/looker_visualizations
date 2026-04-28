@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Looker Generic Visualization Harness</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        #vis {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Local Visualisation Test</h1>
+    <div class="controls">
+        <label><input type="checkbox" id="opt-row-numbers" checked> Show Row Numbers</label>
+        <br>
+        <label>Custom CSS:</label><br>
+        <textarea id="opt-custom-css" rows="5" cols="50"></textarea>
+        <br>
+        <button onclick="updateVis()">Update Visualization</button>
+    </div>
+    <div id="vis"></div>
+
+    <script>
+        // Mock Looker Object
+        const looker = {
+            plugins: {
+                visualizations: {
+                    add: function (vis) {
+                        console.log("Registered vis:", vis);
+                        window.currentVis = vis;
+                    }
+                }
+            }
+        };
+
+        // Mock Data
+        const mockData = [
+            { "users.state": { value: "California" }, "users.count": { value: 1200, value_formatted: "1,200" }, "users.age_tier": { value: "20-30" } },
+            { "users.state": { value: "New York" }, "users.count": { value: 900, value_formatted: "900" }, "users.age_tier": { value: "20-30" } },
+            { "users.state": { value: "Oregon" }, "users.count": { value: 300, value_formatted: "300" }, "users.age_tier": { value: "30-40" } }
+        ];
+
+        const mockQueryResponse = {
+            fields: {
+                dimensions: [
+                    { name: "users.state", label_short: "State" },
+                    { name: "users.age_tier", label_short: "Age Tier" }
+                ],
+                measures: [
+                    { name: "users.count", label_short: "Count" }
+                ]
+            }
+        };
+
+        function getOptions() {
+            return {
+                show_row_numbers: document.getElementById('opt-row-numbers').checked,
+                custom_css: document.getElementById('opt-custom-css').value
+            };
+        }
+
+        function updateVis() {
+            if (window.currentVis) {
+                const container = document.getElementById('vis');
+                // Clear container before re-render simulation if needed, but our updateAsync handles innerHTML overwrite
+                const config = getOptions();
+                window.currentVis.updateAsync(mockData, container, config, mockQueryResponse, {}, () => {
+                    console.log("Render finished");
+                });
+            }
+        }
+
+        // Load the script dynamically to mimic Looker loading
+        const script = document.createElement('script');
+        script.src = 'looker_custom_table.js';
+        script.onload = () => {
+            if (window.currentVis) {
+                const container = document.getElementById('vis');
+                window.currentVis.create(container, getOptions());
+                updateVis();
+            }
+        };
+        document.body.appendChild(script);
+
+    </script>
+</body>
+
+</html>
