@@ -79,61 +79,61 @@ looker.plugins.visualizations.add({
             const fieldLabel = field.label_short || field.label;
 
             dynamicOptions[`${fieldName}_label`] = {
-                section: fieldLabel,
+                section: "Seria",
                 type: "string",
-                label: "Label",
+                label: `[${fieldLabel}] Etykieta`,
                 display: "text",
                 default: fieldLabel,
             };
 
             dynamicOptions[`${fieldName}_width`] = {
-                section: fieldLabel,
+                section: "Seria",
                 type: "string",
-                label: "Width (e.g. 150px)",
+                label: `[${fieldLabel}] Szerokość`,
                 display: "text",
                 default: "auto",
             };
 
             dynamicOptions[`${fieldName}_color`] = {
-                section: fieldLabel,
+                section: "Seria",
                 type: "string",
-                label: "Text Color",
+                label: `[${fieldLabel}] Kolor Tekstu`,
                 display: "color",
                 default: "#000000",
             };
 
             dynamicOptions[`${fieldName}_bg_color`] = {
-                section: fieldLabel,
+                section: "Seria",
                 type: "string",
-                label: "Background Color",
+                label: `[${fieldLabel}] Kolor Tła`,
                 display: "color",
                 default: "#ffffff",
             };
 
             dynamicOptions[`${fieldName}_text_align`] = {
-                section: fieldLabel,
+                section: "Seria",
                 type: "string",
-                label: "Text Alignment",
+                label: `[${fieldLabel}] Wyrównanie Tekstu`,
                 display: "select",
                 values: [
-                    {"Left": "left"},
-                    {"Center": "center"},
-                    {"Right": "right"}
+                    {"Do lewej": "left"},
+                    {"Środek": "center"},
+                    {"Do prawej": "right"}
                 ],
                 default: "left",
             };
 
             dynamicOptions[`${fieldName}_is_bold`] = {
-                section: fieldLabel,
+                section: "Seria",
                 type: "boolean",
-                label: "Bold",
+                label: `[${fieldLabel}] Pogrubienie`,
                 default: false,
             };
 
             dynamicOptions[`${fieldName}_padding`] = {
-                section: fieldLabel,
+                section: "Seria",
                 type: "string",
-                label: "Padding (e.g. 8px 12px)",
+                label: `[${fieldLabel}] Padding`,
                 display: "text",
                 default: "8px",
             };
