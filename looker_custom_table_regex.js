@@ -1,8 +1,9 @@
 looker.plugins.visualizations.add({
   id: "custom_table_js_logic",
-  label: "Tabela (Formatowanie JS)",
+  label: "Tabela (Formatowanie JS + Ukrywanie)",
   
   options: {
+    // Statyczne opcje inicjalizacyjne. Zostaną nadpisane dynamicznie w updateAsync
     header_color: {
       section: "1. Kolory",
       type: "array",
@@ -22,7 +23,7 @@ looker.plugins.visualizations.add({
       type: "string",
       label: "Własny kod JS (zwróć true aby pogrubić)",
       display: "text",
-      default: "// Użyj funkcji getValue('Nazwa kolumny')\nreturn false;"
+      default: "// Użyj funkcji getValue('Nazwa') i getFilterValue('Nazwa')\nreturn false;"
     }
   },
 
@@ -102,6 +103,34 @@ looker.plugins.visualizations.add({
       return;
     }
 
+    // --- REJESTRACJA DYNAMICZNYCH OPCJI (Checkboxy do ukrywania kolumn) ---
+    let dynamicOptions = {
+      header_color: {
+        section: "1. Kolory", type: "array", label: "Kolor nagłówka umowy", display: "colors", default: ["#1A73E8"]
+      },
+      text_color: {
+        section: "1. Kolory", type: "array", label: "Kolor tekstu w tabeli", display: "colors", default: ["#333333"]
+      },
+      custom_js_logic: {
+        section: "2. Logika formatowania", type: "string", label: "Własny kod JS (zwróć true aby pogrubić)", display: "text", default: "// Użyj funkcji getValue('Nazwa') i getFilterValue('Nazwa')\nreturn false;"
+      }
+    };
+
+    visibleFields.forEach(field => {
+      const fieldName = field.label_short || field.label || field.name;
+      dynamicOptions[`hide_${field.name}`] = {
+        section: "3. Ukrywanie kolumn",
+        type: "boolean",
+        label: `Ukryj: ${fieldName}`,
+        default: false
+      };
+    });
+
+    this.trigger('registerOptions', dynamicOptions);
+
+    // --- FILTROWANIE KOLUMN DO WYSWIETLENIA ---
+    const fieldsToRender = visibleFields.filter(field => !config[`hide_${field.name}`]);
+
     // Funkcja pomocnicza do wyszukiwania faktycznej nazwy pola na podstawie wpisanego tekstu
     const getRealFieldName = (inputStr) => {
       if (!inputStr) return null;
@@ -119,7 +148,7 @@ looker.plugins.visualizations.add({
     const rawJs = config.custom_js_logic;
     if (rawJs && rawJs.trim() !== "") {
       try {
-        customLogicFn = new Function('row', 'getValue', rawJs);
+        customLogicFn = new Function('row', 'getValue', 'getFilterValue', rawJs);
       } catch (e) {
         console.error("Błąd kompilacji własnego kodu JS:", e);
         this.addError({title: "Błąd kodu JS", message: "Sprawdź składnię w panelu opcji."});
@@ -135,8 +164,8 @@ looker.plugins.visualizations.add({
     let html = '<div class="card">';
     html += '<table class="data-table"><thead><tr>';
 
-    // Rysowanie nagłówków (tylko widoczne pola)
-    visibleFields.forEach(field => {
+    // Rysowanie nagłówków (tylko kolumny, które nie zostały ukryte w configu)
+    fieldsToRender.forEach(field => {
       html += `<th>${field.label_short || field.label || field.name}</th>`;
     });
     html += '</tr></thead><tbody>';
@@ -145,7 +174,7 @@ looker.plugins.visualizations.add({
     data.forEach(row => {
       let shouldBoldRow = false;
 
-      // Funkcja pomocnicza przekazywana do własnego skryptu JS
+      // Funkcje pomocnicze przekazywane do własnego skryptu JS
       const getValue = (colName) => {
         const realName = getRealFieldName(colName);
         if (realName && row[realName]) {
@@ -154,10 +183,18 @@ looker.plugins.visualizations.add({
         return null;
       };
 
+      const getFilterValue = (colName) => {
+        const realName = getRealFieldName(colName);
+        if (realName && queryResponse.query && queryResponse.query.filters) {
+          return queryResponse.query.filters[realName];
+        }
+        return null;
+      };
+
       // Wywołanie skryptu użytkownika
       if (customLogicFn) {
         try {
-          shouldBoldRow = customLogicFn(row, getValue);
+          shouldBoldRow = customLogicFn(row, getValue, getFilterValue);
         } catch (e) {
           console.error("Błąd wykonania własnego kodu JS dla wiersza:", e);
         }
@@ -166,8 +203,8 @@ looker.plugins.visualizations.add({
       const rowStyle = shouldBoldRow ? ' style="font-weight: 900;"' : '';
       html += `<tr${rowStyle}>`;
 
-      // Renderowanie komórek (tylko widoczne pola)
-      visibleFields.forEach(field => {
+      // Renderowanie komórek (tylko widoczne i nieukryte pola)
+      fieldsToRender.forEach(field => {
         const cell = row[field.name];
         let displayValue = "";
         if (cell) {
