@@ -3,14 +3,24 @@ looker.plugins.visualizations.add({
   label: "Tabela (Formatowanie JS + Ukrywanie)",
   
   options: {
-    header_color: {
-      section: "1. Kolory", type: "array", label: "Kolor nagłówka umowy", display: "colors", default: ["#1A73E8"]
-    },
-    text_color: {
-      section: "1. Kolory", type: "array", label: "Kolor tekstu w tabeli", display: "colors", default: ["#333333"]
+    color_theme: {
+      section: "1. Motyw",
+      type: "string",
+      label: "Motyw kolorystyczny",
+      display: "select",
+      values: [
+        {"Corporate Blue": "blue"},
+        {"Modern Dark": "dark"},
+        {"Clean Minimal": "minimal"}
+      ],
+      default: "blue"
     },
     custom_js_logic: {
-      section: "2. Logika formatowania", type: "string", label: "Własny kod JS (zwróć true lub string z CSS)", display: "text", default: "// Użyj funkcji getValue('Nazwa')\nreturn false;"
+      section: "2. Logika formatowania", 
+      type: "string", 
+      label: "Własny kod JS (zwróć true lub string z CSS)", 
+      display: "text", 
+      default: "// np. return 'color: red; font-weight: bold;'\nreturn false;"
     }
   },
 
@@ -22,30 +32,28 @@ looker.plugins.visualizations.add({
       .looker-vis-wrapper {
         width: 100%; height: 100%; overflow-y: auto; padding: 15px;
         box-sizing: border-box; font-family: 'Open Sans', Arial, sans-serif;
-        background-color: #F8F9FA;
-        --main-color: #1A73E8;
-        --text-color: #333333;
+        background-color: var(--page-bg);
       }
       .card {
-        margin-bottom: 25px; background: #FFFFFF; border: 1px solid #E0E0E0;
+        margin-bottom: 25px; background: var(--bg-color); border: 1px solid var(--border-color);
         border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); overflow: hidden;
       }
       .card-header {
-        background-color: var(--main-color); color: white;
+        background-color: var(--main-color); color: var(--header-text);
         padding: 12px 20px; font-weight: 600; font-size: 16px;
       }
       .data-table {
         width: 100%; border-collapse: collapse; font-size: 13px; color: var(--text-color);
       }
       .data-table th {
-        background-color: #F1F3F4; padding: 10px 20px; text-align: left;
-        font-weight: 600; color: #5F6368; border-bottom: 2px solid #DADCE0;
+        background-color: var(--th-bg); padding: 10px 20px; text-align: left;
+        font-weight: 600; border-bottom: 2px solid var(--border-color);
       }
       .data-table td {
-        padding: 10px 20px; border-bottom: 1px solid #F1F3F4; border-right: 1px solid #F8F9FA;
+        padding: 10px 20px; border-bottom: 1px solid var(--border-color); border-right: 1px solid transparent;
       }
-      .data-table tr:nth-child(even) { background-color: #FAFAFA; }
-      .data-table tr:hover { background-color: #F1F8FF; }
+      .data-table tr:nth-child(even) { background-color: var(--alt-row); }
+      .data-table tr:hover { background-color: var(--hover-bg); }
       
       .col-numeric { text-align: right !important; }
       .col-text { text-align: left !important; }
@@ -81,18 +89,29 @@ looker.plugins.visualizations.add({
 
     const currentFieldsStr = visibleFields.map(f => f.name).join(',');
     
+    // Generowanie dynamicznych opcji
     if (this._previousFieldsStr !== currentFieldsStr) {
       this._previousFieldsStr = currentFieldsStr;
       
       let dynamicOptions = {
-        header_color: {
-          section: "1. Kolory", type: "array", label: "Kolor nagłówka umowy", display: "colors", default: ["#1A73E8"]
-        },
-        text_color: {
-          section: "1. Kolory", type: "array", label: "Kolor tekstu w tabeli", display: "colors", default: ["#333333"]
+        color_theme: {
+          section: "1. Motyw",
+          type: "string",
+          label: "Motyw kolorystyczny",
+          display: "select",
+          values: [
+            {"Corporate Blue": "blue"},
+            {"Modern Dark": "dark"},
+            {"Clean Minimal": "minimal"}
+          ],
+          default: "blue"
         },
         custom_js_logic: {
-          section: "2. Logika formatowania", type: "string", label: "Własny kod JS (zwróć true lub string z CSS)", display: "text", default: "// np. return 'color: red; font-weight: bold;'\nreturn false;"
+          section: "2. Logika formatowania", 
+          type: "string", 
+          label: "Własny kod JS (zwróć true lub string z CSS)", 
+          display: "text", 
+          default: "// np. return 'color: red; font-weight: bold;'\nreturn false;"
         }
       };
 
@@ -133,10 +152,17 @@ looker.plugins.visualizations.add({
       }
     }
 
-    const headerColor = (config.header_color && config.header_color[0]) ? config.header_color[0] : "#1A73E8";
-    const textColor = (config.text_color && config.text_color[0]) ? config.text_color[0] : "#333333";
-    this.container.style.setProperty('--main-color', headerColor);
-    this.container.style.setProperty('--text-color', textColor);
+    // Aplikowanie wybranego motywu
+    const themes = {
+      blue: { page_bg: "#F8F9FA", bg: "#FFFFFF", main: "#1A73E8", text: "#333333", th_bg: "#F1F3F4", border: "#DADCE0", alt_row: "#FAFAFA", hover: "#F1F8FF", header_text: "#FFFFFF" },
+      dark: { page_bg: "#121212", bg: "#1E1E1E", main: "#333333", text: "#E0E0E0", th_bg: "#2C2C2C", border: "#424242", alt_row: "#252525", hover: "#383838", header_text: "#90CAF9" },
+      minimal: { page_bg: "#FFFFFF", bg: "#FFFFFF", main: "#212121", text: "#212121", th_bg: "#F8F9FA", border: "#EEEEEE", alt_row: "#FFFFFF", hover: "#F5F5F5", header_text: "#FFFFFF" }
+    };
+    
+    let t = themes[config.color_theme] || themes.blue;
+    for (let key in t) {
+      this.container.style.setProperty(`--${key.replace('_', '-')}`, t[key]);
+    }
 
     let html = '<div class="card">';
     html += '<table class="data-table"><thead><tr>';
@@ -147,7 +173,7 @@ looker.plugins.visualizations.add({
     html += '</tr></thead><tbody>';
 
     data.forEach(row => {
-      let formatResult = false; // Może być boolean lub string z CSS
+      let formatResult = false; 
 
       const getValue = (colName) => {
         const realName = getRealFieldName(colName);
@@ -173,7 +199,6 @@ looker.plugins.visualizations.add({
         }
       }
 
-      // NOWA LOGIKA: Zwraca styl CSS jako tekst lub domyślne pogrubienie dla true
       let rowStyleAttr = '';
       if (typeof formatResult === 'string' && formatResult.trim() !== '') {
         rowStyleAttr = ` style="${formatResult}"`;
