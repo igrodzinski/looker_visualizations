@@ -10,7 +10,7 @@ looker.plugins.visualizations.add({
       section: "1. Kolory", type: "array", label: "Kolor tekstu w tabeli", display: "colors", default: ["#333333"]
     },
     custom_js_logic: {
-      section: "2. Logika formatowania", type: "string", label: "Własny kod JS (zwróć true aby pogrubić)", display: "text", default: "// Użyj funkcji getValue('Nazwa') i getFilterValue('Nazwa')\nreturn false;"
+      section: "2. Logika formatowania", type: "string", label: "Własny kod JS (zwróć true lub string z CSS)", display: "text", default: "// Użyj funkcji getValue('Nazwa')\nreturn false;"
     }
   },
 
@@ -49,16 +49,6 @@ looker.plugins.visualizations.add({
       
       .col-numeric { text-align: right !important; }
       .col-text { text-align: left !important; }
-      
-      .summary-row {
-        background-color: #F4F8FD; border-top: 2px solid var(--main-color);
-      }
-      .summary-row td {
-        font-weight: 700; font-size: 14px; padding: 12px 20px;
-      }
-      .summary-label {
-        color: var(--main-color); text-transform: uppercase; font-size: 12px;
-      }
     `;
     element.appendChild(style);
 
@@ -89,7 +79,6 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // --- NAPRAWA BŁĘDU: Rejestrujemy opcje tylko, gdy zmieni się układ kolumn ---
     const currentFieldsStr = visibleFields.map(f => f.name).join(',');
     
     if (this._previousFieldsStr !== currentFieldsStr) {
@@ -103,7 +92,7 @@ looker.plugins.visualizations.add({
           section: "1. Kolory", type: "array", label: "Kolor tekstu w tabeli", display: "colors", default: ["#333333"]
         },
         custom_js_logic: {
-          section: "2. Logika formatowania", type: "string", label: "Własny kod JS (zwróć true aby pogrubić)", display: "text", default: "// Użyj funkcji getValue('Nazwa') i getFilterValue('Nazwa')\nreturn false;"
+          section: "2. Logika formatowania", type: "string", label: "Własny kod JS (zwróć true lub string z CSS)", display: "text", default: "// np. return 'color: red; font-weight: bold;'\nreturn false;"
         }
       };
 
@@ -120,7 +109,6 @@ looker.plugins.visualizations.add({
       this.trigger('registerOptions', dynamicOptions);
     }
 
-    // Filtrujemy kolumny, sprawdzając, czy użytkownik ustawił hide = true w configu
     const fieldsToRender = visibleFields.filter(field => !config[`hide_${field.name}`]);
 
     const getRealFieldName = (inputStr) => {
@@ -159,7 +147,7 @@ looker.plugins.visualizations.add({
     html += '</tr></thead><tbody>';
 
     data.forEach(row => {
-      let shouldBoldRow = false;
+      let formatResult = false; // Może być boolean lub string z CSS
 
       const getValue = (colName) => {
         const realName = getRealFieldName(colName);
@@ -179,14 +167,21 @@ looker.plugins.visualizations.add({
 
       if (customLogicFn) {
         try {
-          shouldBoldRow = customLogicFn(row, getValue, getFilterValue);
+          formatResult = customLogicFn(row, getValue, getFilterValue);
         } catch (e) {
           console.error("Błąd wykonania własnego kodu JS dla wiersza:", e);
         }
       }
 
-      const rowStyle = shouldBoldRow ? ' style="font-weight: 900;"' : '';
-      html += `<tr${rowStyle}>`;
+      // NOWA LOGIKA: Zwraca styl CSS jako tekst lub domyślne pogrubienie dla true
+      let rowStyleAttr = '';
+      if (typeof formatResult === 'string' && formatResult.trim() !== '') {
+        rowStyleAttr = ` style="${formatResult}"`;
+      } else if (formatResult === true) {
+        rowStyleAttr = ' style="font-weight: 900;"';
+      }
+
+      html += `<tr${rowStyleAttr}>`;
 
       fieldsToRender.forEach(field => {
         const cell = row[field.name];
