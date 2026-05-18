@@ -111,7 +111,7 @@ looker.plugins.visualizations.add({
     const table_calculations = fields.table_calculations || [];
     
     // Zbieramy wszystkie pola - widoczne oraz ukryte
-    const allFields = [...dimensions, ...measures, ...table_calculations];
+    const allFields = dimensions.concat(measures).concat(table_calculations);
     const visibleFields = allFields.filter(f => !f.hidden);
 
     if (allFields.length === 0) {
