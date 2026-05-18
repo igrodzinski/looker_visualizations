@@ -78,8 +78,8 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    const dimensions = queryResponse.fields.dimensions || [];
-    const measures = queryResponse.fields.measures || [];
+    const dimensions = queryResponse.fields.dimension_like || [];
+    const measures = queryResponse.fields.measure_like || [];
     const table_calculations = queryResponse.fields.table_calculations || [];
     
     // Zbieramy wszystkie pola - widoczne oraz ukryte
@@ -220,7 +220,7 @@ looker.plugins.visualizations.add({
         const cell = row[field.name];
         let displayValue = "";
         if (cell) {
-          displayValue = cell.html ? cell.html : (cell.value_formatted !== undefined ? cell.value_formatted : cell.value);
+          displayValue = cell.html ? cell.html : (cell.rendered !== undefined ? cell.rendered : (cell.value_formatted !== undefined ? cell.value_formatted : cell.value));
           if (displayValue === null || displayValue === undefined) displayValue = "";
         }
         
