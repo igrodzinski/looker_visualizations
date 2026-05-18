@@ -1,20 +1,7 @@
 looker.plugins.visualizations.add({
   id: "custom_table_regex",
   label: "Tabela (RegEx Formatowanie)",
-  options: {
-    header_color: {
-      type: "array",
-      label: "Kolor nagłówka umowy",
-      display: "colors",
-      default: ["#1A73E8"]
-    },
-    text_color: {
-      type: "array",
-      label: "Kolor tekstu w tabeli",
-      display: "colors",
-      default: ["#333333"]
-    }
-  },
+
 
   create: function(element, config) {
     element.innerHTML = "";
