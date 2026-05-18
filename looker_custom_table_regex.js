@@ -101,7 +101,20 @@ looker.plugins.visualizations.add({
       columnChoices.push(choice);
     });
 
-    let newOptions = { ...this.options };
+    let newOptions = {
+      header_color: {
+        type: "array",
+        label: "Kolor nagłówka umowy",
+        display: "colors",
+        default: ["#1A73E8"]
+      },
+      text_color: {
+        type: "array",
+        label: "Kolor tekstu w tabeli",
+        display: "colors",
+        default: ["#333333"]
+      }
+    };
 
     // Tworzymy 10 slotów na reguły formatowania (RegEx)
     for (let i = 1; i <= 10; i++) {
