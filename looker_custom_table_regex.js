@@ -9,11 +9,9 @@ looker.plugins.visualizations.add({
       label: "Motyw kolorystyczny",
       display: "select",
       values: [
-        {"Corporate Blue": "blue"},
-        {"Modern Dark": "dark"},
         {"Clean Minimal": "minimal"}
       ],
-      default: "blue"
+      default: "minimal"
     },
     custom_js_logic: {
       section: "2. Logika formatowania", 
@@ -74,11 +72,9 @@ looker.plugins.visualizations.add({
     }
 
     let fields = queryResponse.fields;
-    const dimensions = fields.dimension_like || [];
-    const measures = fields.measure_like || [];
-    const table_calculations = fields.table_calculations || [];
     
-    const allFields = dimensions.concat(measures).concat(table_calculations);
+    let allFieldsList = (fields.dimensions || []).concat(fields.measures || []).concat(fields.table_calculations || []).concat(fields.dimension_like || []).concat(fields.measure_like || []);
+    const allFields = allFieldsList.filter((v, i, a) => a.findIndex(t => (t.name === v.name)) === i);
     const visibleFields = allFields.filter(f => !f.hidden);
 
     if (allFields.length === 0) {
@@ -89,7 +85,6 @@ looker.plugins.visualizations.add({
 
     const currentFieldsStr = visibleFields.map(f => f.name).join(',');
     
-    // Generowanie dynamicznych opcji
     if (this._previousFieldsStr !== currentFieldsStr) {
       this._previousFieldsStr = currentFieldsStr;
       
@@ -100,11 +95,9 @@ looker.plugins.visualizations.add({
           label: "Motyw kolorystyczny",
           display: "select",
           values: [
-            {"Corporate Blue": "blue"},
-            {"Modern Dark": "dark"},
             {"Clean Minimal": "minimal"}
           ],
-          default: "blue"
+          default: "minimal"
         },
         custom_js_logic: {
           section: "2. Logika formatowania", 
@@ -133,12 +126,21 @@ looker.plugins.visualizations.add({
     const getRealFieldName = (inputStr) => {
       if (!inputStr) return null;
       const lowerInput = inputStr.toLowerCase().trim();
+      
       const match = allFields.find(f => 
         f.name.toLowerCase() === lowerInput || 
         (f.label_short && f.label_short.toLowerCase() === lowerInput) || 
         (f.label && f.label.toLowerCase() === lowerInput)
       );
-      return match ? match.name : null;
+      if (match) return match.name;
+
+      if (data.length > 0) {
+        const dataKeys = Object.keys(data[0]);
+        const asKey = lowerInput.replace(/\s+/g, '_'); 
+        const keyMatch = dataKeys.find(k => k.toLowerCase() === lowerInput || k.toLowerCase().endsWith('.' + asKey));
+        if (keyMatch) return keyMatch;
+      }
+      return null;
     };
 
     let customLogicFn = null;
@@ -152,14 +154,11 @@ looker.plugins.visualizations.add({
       }
     }
 
-    // Aplikowanie wybranego motywu
     const themes = {
-      blue: { page_bg: "#F8F9FA", bg: "#FFFFFF", main: "#1A73E8", text: "#333333", th_bg: "#F1F3F4", border: "#DADCE0", alt_row: "#FAFAFA", hover: "#F1F8FF", header_text: "#FFFFFF" },
-      dark: { page_bg: "#121212", bg: "#1E1E1E", main: "#333333", text: "#E0E0E0", th_bg: "#2C2C2C", border: "#424242", alt_row: "#252525", hover: "#383838", header_text: "#90CAF9" },
       minimal: { page_bg: "#FFFFFF", bg: "#FFFFFF", main: "#212121", text: "#212121", th_bg: "#F8F9FA", border: "#EEEEEE", alt_row: "#FFFFFF", hover: "#F5F5F5", header_text: "#FFFFFF" }
     };
     
-    let t = themes[config.color_theme] || themes.blue;
+    let t = themes[config.color_theme] || themes.minimal;
     for (let key in t) {
       this.container.style.setProperty(`--${key.replace('_', '-')}`, t[key]);
     }
