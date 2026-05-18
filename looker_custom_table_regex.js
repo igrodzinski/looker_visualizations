@@ -1,6 +1,6 @@
 looker.plugins.visualizations.add({
-  id: "custom_table_regex",
-  label: "Tabela (RegEx Formatowanie)",
+  id: "custom_table_js_logic",
+  label: "Tabela (Formatowanie JS)",
   
   options: {
     header_color: {
@@ -17,31 +17,13 @@ looker.plugins.visualizations.add({
       display: "colors",
       default: ["#333333"]
     },
-    // Reguła 1
-    rule_1_cond_col: { section: "Reguła 1", type: "string", label: "Kolumna Warunku (wpisz dokładną nazwę)", display: "text", default: "" },
-    rule_1_cond_val: { section: "Reguła 1", type: "string", label: "Wartość Warunku", display: "text", default: "" },
-    rule_1_regex_col: { section: "Reguła 1", type: "string", label: "Kolumna RegEx (wpisz dokładną nazwę)", display: "text", default: "" },
-    rule_1_regex_pat: { section: "Reguła 1", type: "string", label: "Wzór RegEx", display: "text", default: "" },
-    // Reguła 2
-    rule_2_cond_col: { section: "Reguła 2", type: "string", label: "Kolumna Warunku (wpisz dokładną nazwę)", display: "text", default: "" },
-    rule_2_cond_val: { section: "Reguła 2", type: "string", label: "Wartość Warunku", display: "text", default: "" },
-    rule_2_regex_col: { section: "Reguła 2", type: "string", label: "Kolumna RegEx (wpisz dokładną nazwę)", display: "text", default: "" },
-    rule_2_regex_pat: { section: "Reguła 2", type: "string", label: "Wzór RegEx", display: "text", default: "" },
-    // Reguła 3
-    rule_3_cond_col: { section: "Reguła 3", type: "string", label: "Kolumna Warunku (wpisz dokładną nazwę)", display: "text", default: "" },
-    rule_3_cond_val: { section: "Reguła 3", type: "string", label: "Wartość Warunku", display: "text", default: "" },
-    rule_3_regex_col: { section: "Reguła 3", type: "string", label: "Kolumna RegEx (wpisz dokładną nazwę)", display: "text", default: "" },
-    rule_3_regex_pat: { section: "Reguła 3", type: "string", label: "Wzór RegEx", display: "text", default: "" },
-    // Reguła 4
-    rule_4_cond_col: { section: "Reguła 4", type: "string", label: "Kolumna Warunku (wpisz dokładną nazwę)", display: "text", default: "" },
-    rule_4_cond_val: { section: "Reguła 4", type: "string", label: "Wartość Warunku", display: "text", default: "" },
-    rule_4_regex_col: { section: "Reguła 4", type: "string", label: "Kolumna RegEx (wpisz dokładną nazwę)", display: "text", default: "" },
-    rule_4_regex_pat: { section: "Reguła 4", type: "string", label: "Wzór RegEx", display: "text", default: "" },
-    // Reguła 5
-    rule_5_cond_col: { section: "Reguła 5", type: "string", label: "Kolumna Warunku (wpisz dokładną nazwę)", display: "text", default: "" },
-    rule_5_cond_val: { section: "Reguła 5", type: "string", label: "Wartość Warunku", display: "text", default: "" },
-    rule_5_regex_col: { section: "Reguła 5", type: "string", label: "Kolumna RegEx (wpisz dokładną nazwę)", display: "text", default: "" },
-    rule_5_regex_pat: { section: "Reguła 5", type: "string", label: "Wzór RegEx", display: "text", default: "" }
+    custom_js_logic: {
+      section: "2. Logika formatowania",
+      type: "string",
+      label: "Własny kod JS (zwróć true aby pogrubić)",
+      display: "text",
+      default: "// Użyj funkcji getValue('Nazwa kolumny')\nreturn false;"
+    }
   },
 
   create: function(element, config) {
@@ -120,7 +102,7 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // Funkcja pomocnicza do wyszukiwania faktycznej nazwy pola w oparciu o wpisany tekst
+    // Funkcja pomocnicza do wyszukiwania faktycznej nazwy pola na podstawie wpisanego tekstu
     const getRealFieldName = (inputStr) => {
       if (!inputStr) return null;
       const lowerInput = inputStr.toLowerCase().trim();
@@ -132,70 +114,59 @@ looker.plugins.visualizations.add({
       return match ? match.name : null;
     };
 
-    // Aktualizacja zmiennych CSS zgodnie z konfiguracją
+    // Kompilacja własnego kodu JS z panelu opcji
+    let customLogicFn = null;
+    const rawJs = config.custom_js_logic;
+    if (rawJs && rawJs.trim() !== "") {
+      try {
+        customLogicFn = new Function('row', 'getValue', rawJs);
+      } catch (e) {
+        console.error("Błąd kompilacji własnego kodu JS:", e);
+        this.addError({title: "Błąd kodu JS", message: "Sprawdź składnię w panelu opcji."});
+      }
+    }
+
+    // Aktualizacja zmiennych CSS
     const headerColor = (config.header_color && config.header_color[0]) ? config.header_color[0] : "#1A73E8";
     const textColor = (config.text_color && config.text_color[0]) ? config.text_color[0] : "#333333";
-
     this.container.style.setProperty('--main-color', headerColor);
     this.container.style.setProperty('--text-color', textColor);
 
     let html = '<div class="card">';
     html += '<table class="data-table"><thead><tr>';
 
-    // Rysowanie nagłówków tylko dla widocznych pól
+    // Rysowanie nagłówków (tylko widoczne pola)
     visibleFields.forEach(field => {
       html += `<th>${field.label_short || field.label || field.name}</th>`;
     });
     html += '</tr></thead><tbody>';
 
-    // Przetwarzanie wierszy z nałożeniem logiki RegEx
+    // Przetwarzanie wierszy z nałożeniem własnej logiki JS
     data.forEach(row => {
       let shouldBoldRow = false;
 
-      // Sprawdzamy 5 statycznych reguł
-      for (let i = 1; i <= 5; i++) {
-        const rawCondCol = config[`rule_${i}_cond_col`];
-        const condVal = config[`rule_${i}_cond_val`];
-        const rawRegexCol = config[`rule_${i}_regex_col`];
-        const regexPat = config[`rule_${i}_regex_pat`];
+      // Funkcja pomocnicza przekazywana do własnego skryptu JS
+      const getValue = (colName) => {
+        const realName = getRealFieldName(colName);
+        if (realName && row[realName]) {
+          return row[realName].value;
+        }
+        return null;
+      };
 
-        if (rawRegexCol && regexPat) {
-          const regexCol = getRealFieldName(rawRegexCol);
-          const condCol = getRealFieldName(rawCondCol);
-
-          if (regexCol) {
-            let conditionPassed = true;
-            
-            // Jeśli podano kolumnę warunku i oczekiwaną wartość
-            if (condCol && condVal !== undefined && condVal !== "") {
-              const condCell = row[condCol];
-              const condCellVal = condCell ? String(condCell.value === null ? "" : condCell.value) : "";
-              if (condCellVal !== condVal) {
-                conditionPassed = false;
-              }
-            }
-
-            if (conditionPassed) {
-               const regexCell = row[regexCol];
-               const regexCellVal = regexCell ? String(regexCell.value === null ? "" : regexCell.value) : "";
-               try {
-                  const regex = new RegExp(regexPat);
-                  if (regex.test(regexCellVal)) {
-                    shouldBoldRow = true;
-                    break; // Przerywamy jeśli któraś reguła pogrubiła wiersz
-                  }
-               } catch (e) {
-                  console.error(`Błąd wyrażenia regularnego w regule ${i}:`, e);
-               }
-            }
-          }
+      // Wywołanie skryptu użytkownika
+      if (customLogicFn) {
+        try {
+          shouldBoldRow = customLogicFn(row, getValue);
+        } catch (e) {
+          console.error("Błąd wykonania własnego kodu JS dla wiersza:", e);
         }
       }
 
       const rowStyle = shouldBoldRow ? ' style="font-weight: 900;"' : '';
       html += `<tr${rowStyle}>`;
 
-      // Renderowanie komórek tylko dla widocznych pól
+      // Renderowanie komórek (tylko widoczne pola)
       visibleFields.forEach(field => {
         const cell = row[field.name];
         let displayValue = "";
