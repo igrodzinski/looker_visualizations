@@ -3,27 +3,14 @@ looker.plugins.visualizations.add({
   label: "Tabela (Formatowanie JS + Ukrywanie)",
   
   options: {
-    // Statyczne opcje inicjalizacyjne. Zostaną nadpisane dynamicznie w updateAsync
     header_color: {
-      section: "1. Kolory",
-      type: "array",
-      label: "Kolor nagłówka umowy",
-      display: "colors",
-      default: ["#1A73E8"]
+      section: "1. Kolory", type: "array", label: "Kolor nagłówka umowy", display: "colors", default: ["#1A73E8"]
     },
     text_color: {
-      section: "1. Kolory",
-      type: "array",
-      label: "Kolor tekstu w tabeli",
-      display: "colors",
-      default: ["#333333"]
+      section: "1. Kolory", type: "array", label: "Kolor tekstu w tabeli", display: "colors", default: ["#333333"]
     },
     custom_js_logic: {
-      section: "2. Logika formatowania",
-      type: "string",
-      label: "Własny kod JS (zwróć true aby pogrubić)",
-      display: "text",
-      default: "// Użyj funkcji getValue('Nazwa') i getFilterValue('Nazwa')\nreturn false;"
+      section: "2. Logika formatowania", type: "string", label: "Własny kod JS (zwróć true aby pogrubić)", display: "text", default: "// Użyj funkcji getValue('Nazwa') i getFilterValue('Nazwa')\nreturn false;"
     }
   },
 
@@ -93,7 +80,6 @@ looker.plugins.visualizations.add({
     const measures = fields.measure_like || [];
     const table_calculations = fields.table_calculations || [];
     
-    // Zbieramy wszystkie pola - widoczne oraz ukryte
     const allFields = dimensions.concat(measures).concat(table_calculations);
     const visibleFields = allFields.filter(f => !f.hidden);
 
@@ -103,35 +89,40 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // --- REJESTRACJA DYNAMICZNYCH OPCJI (Checkboxy do ukrywania kolumn) ---
-    let dynamicOptions = {
-      header_color: {
-        section: "1. Kolory", type: "array", label: "Kolor nagłówka umowy", display: "colors", default: ["#1A73E8"]
-      },
-      text_color: {
-        section: "1. Kolory", type: "array", label: "Kolor tekstu w tabeli", display: "colors", default: ["#333333"]
-      },
-      custom_js_logic: {
-        section: "2. Logika formatowania", type: "string", label: "Własny kod JS (zwróć true aby pogrubić)", display: "text", default: "// Użyj funkcji getValue('Nazwa') i getFilterValue('Nazwa')\nreturn false;"
-      }
-    };
-
-    visibleFields.forEach(field => {
-      const fieldName = field.label_short || field.label || field.name;
-      dynamicOptions[`hide_${field.name}`] = {
-        section: "3. Ukrywanie kolumn",
-        type: "boolean",
-        label: `Ukryj: ${fieldName}`,
-        default: false
+    // --- NAPRAWA BŁĘDU: Rejestrujemy opcje tylko, gdy zmieni się układ kolumn ---
+    const currentFieldsStr = visibleFields.map(f => f.name).join(',');
+    
+    if (this._previousFieldsStr !== currentFieldsStr) {
+      this._previousFieldsStr = currentFieldsStr;
+      
+      let dynamicOptions = {
+        header_color: {
+          section: "1. Kolory", type: "array", label: "Kolor nagłówka umowy", display: "colors", default: ["#1A73E8"]
+        },
+        text_color: {
+          section: "1. Kolory", type: "array", label: "Kolor tekstu w tabeli", display: "colors", default: ["#333333"]
+        },
+        custom_js_logic: {
+          section: "2. Logika formatowania", type: "string", label: "Własny kod JS (zwróć true aby pogrubić)", display: "text", default: "// Użyj funkcji getValue('Nazwa') i getFilterValue('Nazwa')\nreturn false;"
+        }
       };
-    });
 
-    this.trigger('registerOptions', dynamicOptions);
+      visibleFields.forEach(field => {
+        const fieldName = field.label_short || field.label || field.name;
+        dynamicOptions[`hide_${field.name}`] = {
+          section: "3. Ukrywanie kolumn",
+          type: "boolean",
+          label: `Ukryj: ${fieldName}`,
+          default: false
+        };
+      });
 
-    // --- FILTROWANIE KOLUMN DO WYSWIETLENIA ---
+      this.trigger('registerOptions', dynamicOptions);
+    }
+
+    // Filtrujemy kolumny, sprawdzając, czy użytkownik ustawił hide = true w configu
     const fieldsToRender = visibleFields.filter(field => !config[`hide_${field.name}`]);
 
-    // Funkcja pomocnicza do wyszukiwania faktycznej nazwy pola na podstawie wpisanego tekstu
     const getRealFieldName = (inputStr) => {
       if (!inputStr) return null;
       const lowerInput = inputStr.toLowerCase().trim();
@@ -143,7 +134,6 @@ looker.plugins.visualizations.add({
       return match ? match.name : null;
     };
 
-    // Kompilacja własnego kodu JS z panelu opcji
     let customLogicFn = null;
     const rawJs = config.custom_js_logic;
     if (rawJs && rawJs.trim() !== "") {
@@ -155,7 +145,6 @@ looker.plugins.visualizations.add({
       }
     }
 
-    // Aktualizacja zmiennych CSS
     const headerColor = (config.header_color && config.header_color[0]) ? config.header_color[0] : "#1A73E8";
     const textColor = (config.text_color && config.text_color[0]) ? config.text_color[0] : "#333333";
     this.container.style.setProperty('--main-color', headerColor);
@@ -164,17 +153,14 @@ looker.plugins.visualizations.add({
     let html = '<div class="card">';
     html += '<table class="data-table"><thead><tr>';
 
-    // Rysowanie nagłówków (tylko kolumny, które nie zostały ukryte w configu)
     fieldsToRender.forEach(field => {
       html += `<th>${field.label_short || field.label || field.name}</th>`;
     });
     html += '</tr></thead><tbody>';
 
-    // Przetwarzanie wierszy z nałożeniem własnej logiki JS
     data.forEach(row => {
       let shouldBoldRow = false;
 
-      // Funkcje pomocnicze przekazywane do własnego skryptu JS
       const getValue = (colName) => {
         const realName = getRealFieldName(colName);
         if (realName && row[realName]) {
@@ -191,7 +177,6 @@ looker.plugins.visualizations.add({
         return null;
       };
 
-      // Wywołanie skryptu użytkownika
       if (customLogicFn) {
         try {
           shouldBoldRow = customLogicFn(row, getValue, getFilterValue);
@@ -203,7 +188,6 @@ looker.plugins.visualizations.add({
       const rowStyle = shouldBoldRow ? ' style="font-weight: 900;"' : '';
       html += `<tr${rowStyle}>`;
 
-      // Renderowanie komórek (tylko widoczne i nieukryte pola)
       fieldsToRender.forEach(field => {
         const cell = row[field.name];
         let displayValue = "";
