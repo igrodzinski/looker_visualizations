@@ -1,0 +1,25 @@
+{
+  "name": "looker-ui-table-viz",
+  "version": "1.0.0",
+  "description": "Looker Table Visualisation using Looker UI Components",
+  "main": "looker_ui_table.js",
+  "scripts": {
+    "build": "webpack --mode production"
+  },
+  "dependencies": {
+    "@looker/components": "3.0.8",
+    "core-js": "^3.49.0",
+    "lodash": "^4.17.21",
+    "react": "^16.14.0",
+    "react-dom": "^16.14.0",
+    "styled-components": "^5.3.6"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.0",
+    "@babel/preset-env": "^7.22.0",
+    "@babel/preset-react": "^7.22.0",
+    "babel-loader": "^9.1.2",
+    "webpack": "^5.85.0",
+    "webpack-cli": "^5.1.1"
+  }
+}
