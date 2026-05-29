@@ -7,7 +7,7 @@ import {
   TableHead,
   TableBody,
   TableRow,
-  TableCell,
+  TableDataCell,
   TableHeaderCell
 } from '@looker/components';
 
@@ -172,24 +172,24 @@ function LookerUiTable({ data, queryResponse, config }) {
           <TableBody>
             {rowsToRender.map((row, i) => (
               <TableRow key={i}>
-                {config.show_row_numbers && <TableCell>{i + 1}</TableCell>}
+                {config.show_row_numbers && <TableDataCell>{i + 1}</TableDataCell>}
                 {visibleFields.map(field => {
                   const cell = row[field.name];
-                  if (!cell) return <TableCell key={field.name} />;
+                  if (!cell) return <TableDataCell key={field.name} />;
 
                   const val = cell.rendered || cell.value_formatted || cell.value;
                   if (cell.html) {
                     return (
-                      <TableCell
+                      <TableDataCell
                         key={field.name}
                         dangerouslySetInnerHTML={{ __html: cell.html }}
                       />
                     );
                   }
                   return (
-                    <TableCell key={field.name}>
+                    <TableDataCell key={field.name}>
                       {val === null || val === undefined ? '' : String(val)}
-                    </TableCell>
+                    </TableDataCell>
                   );
                 })}
               </TableRow>
@@ -198,7 +198,7 @@ function LookerUiTable({ data, queryResponse, config }) {
             {/* Totals row */}
             {config.show_totals && queryResponse.totals && (
               <TableRow style={{ fontWeight: 'bold', borderTop: '2px solid #ccc' }}>
-                {config.show_row_numbers && <TableCell>Suma</TableCell>}
+                {config.show_row_numbers && <TableDataCell>Suma</TableDataCell>}
                 {visibleFields.map((field, idx) => {
                   const totalCell = queryResponse.totals[field.name];
                   const fallbackLabel = (!config.show_row_numbers && idx === 0) ? 'Suma' : '';
@@ -207,22 +207,22 @@ function LookerUiTable({ data, queryResponse, config }) {
                     const totalVal = totalCell.rendered || totalCell.value_formatted || totalCell.value;
                     if (totalCell.html) {
                       return (
-                        <TableCell
+                        <TableDataCell
                           key={field.name}
                           dangerouslySetInnerHTML={{ __html: totalCell.html }}
                         />
                       );
                     }
                     return (
-                      <TableCell key={field.name}>
+                      <TableDataCell key={field.name}>
                         {totalVal === null || totalVal === undefined ? '' : String(totalVal)}
-                      </TableCell>
+                      </TableDataCell>
                     );
                   }
                   return (
-                    <TableCell key={field.name}>
+                    <TableDataCell key={field.name}>
                       {fallbackLabel}
-                    </TableCell>
+                    </TableDataCell>
                   );
                 })}
               </TableRow>
